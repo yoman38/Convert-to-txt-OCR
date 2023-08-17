@@ -1,0 +1,28 @@
+
+
+
+OCR Script for Text Extraction and Handling
+===========================================
+
+This script is designed to process various types of documents, including PDFs, images (JPG, JPEG, PNG), TXT files, and DOCX files. It uses OCR (Optical Character Recognition) to extract text from images and non-selectable PDFs.
+
+Prerequisites
+-------------
+1. Install Tesseract OCR: Make sure you have Tesseract OCR installed on your system. You can download it from https://github.com/tesseract-ocr/tesseract.
+Install tesseract : https://github.com/UB-Mannheim/tesseract/wiki
+(enable environment in terminal)
+2. Python Dependencies: Install the required Python packages by running the following command in your terminal or command prompt:
+pip install PyPDF2 pytesseract Pillow pdf2image python-docx 
+3. Run the script
+Processed documents will be saved in the "OutputAfterOCR" folder. If a document has selectable text, a TXT file with the extracted text will be created. If not,  a txt will be created using OCR.
+
+4. Languages: The script is set to extract text in the French language by default. You can change the language by modifying the `ocr_image` function in the script. Don't forget to download the package when installing (1.)
+
+5. Text Formatting: The script preserves interword spaces and separates paragraphs with two newlines.
+
+Note: This script uses PyPDF2 to handle PDFs. As of version 3.0.0, PdfFileReader is deprecated in favor of PdfReader.
+
+Contact
+-------
+If you have any questions or encounter issues, please contact [Your Name] at [Your Email].
+
