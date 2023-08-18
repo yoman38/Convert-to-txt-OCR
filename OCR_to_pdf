@@ -1,0 +1,108 @@
+#Install poppler for your operating system.
+#Add the poppler binary directory to your system's PATH variable.
+#For Windows:
+#Download the latest Poppler's Windows release from here. https://github.com/oschwartz10612/poppler-windows/releases/tag/v23.08.0-0
+#Extract the downloaded archive.
+#Add the bin directory from the extracted archive to your system's PATH.
+
+#pip install PyPDF2 Pillow pytesseract pdf2image python-docx openpyxl python-pptx fpdf
+import os
+import shutil
+from PyPDF2 import PdfReader, PdfWriter
+from PIL import Image
+from pdf2image import convert_from_path, exceptions
+import pytesseract
+from docx import Document
+from pptx import Presentation
+import openpyxl
+from fpdf import FPDF
+import logging
+
+# Constants
+TESSERACT_CMD_PATH = r'C:\Users\gbray\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'
+INPUT_FOLDER = r"C:\Users\gbray\Documents\gpt4-pdf-chatbot-langchain-main\PasteDocsHere"
+OUTPUT_FOLDER = r"C:\Users\gbray\Documents\gpt4-pdf-chatbot-langchain-main\docs"
+LOGGING_FORMAT = "%(asctime)s — %(levelname)s — %(message)s"
+pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD_PATH
+logging.basicConfig(level=logging.INFO, format=LOGGING_FORMAT)
+
+class PDF(FPDF):
+    def header(self):
+        self.set_font('Arial', 'B', 12)
+        self.cell(0, 10, self.title, 0, 1, 'C')
+
+    def footer(self):
+        self.set_y(-15)
+        self.set_font('Arial', 'I', 8)
+        self.cell(0, 10, 'Page ' + str(self.page_no()), 0, 0, 'C')
+
+def has_selectable_text(pdf_path):
+    text_content = []
+    with open(pdf_path, 'rb') as f:
+        reader = PdfReader(f)
+        for page in reader.pages:
+            text_content.append(page.extract_text())
+    return '\n'.join(text_content).strip()
+
+def ocr_image(image_path):
+    image = Image.open(image_path)
+    return pytesseract.image_to_string(image, lang='fra')
+
+def ocr_pdf(pdf_path):
+    text_content = []
+    poppler_path = r"C:\Users\gbray\appdata\local\anaconda3\lib\site-packages\poppler-23.08.0\Library\bin"
+    images = convert_from_path(pdf_path, poppler_path=poppler_path)
+    for image in images:
+        text_content.append(pytesseract.image_to_string(image, lang='fra'))
+    return '\n'.join(text_content).strip()
+
+def extract_excel_text(excel_path):
+    text_content = []
+    workbook = openpyxl.load_workbook(excel_path)
+    for sheet in workbook:
+        for row in sheet.iter_rows():
+            text_content.append('    '.join(str(cell.value) if cell.value else '' for cell in row))
+    return '\n'.join(text_content).strip()
+
+def extract_docx_text(docx_path):
+    text_content = []
+    doc = Document(docx_path)
+    for para in doc.paragraphs:
+        text_content.append(para.text)
+    return '\n'.join(text_content).strip()
+
+def write_text_to_pdf(text_content, output_pdf_path, file_name):
+    pdf = PDF()
+    pdf.set_title(file_name)
+    pdf.add_page()
+    pdf.set_font('Arial', '', 12)
+    pdf.multi_cell(0, 10, text_content)
+    pdf.output(output_pdf_path)
+
+def process_document(file_path, folderok_path):
+    file_ext = os.path.splitext(file_path)[1].lower()
+    output_pdf_path = os.path.join(folderok_path, os.path.splitext(os.path.basename(file_path))[0] + ".pdf")
+    file_name = os.path.splitext(os.path.basename(file_path))[0]
+
+    if file_ext == '.pdf':
+        text_content = has_selectable_text(file_path) or ocr_pdf(file_path)
+    elif file_ext == '.txt':
+        with open(file_path, 'r', encoding='utf-8') as f:
+            text_content = f.read()
+    elif file_ext in ['.jpg', '.jpeg', '.png']:
+        text_content = ocr_image(file_path)
+    elif file_ext == '.docx':
+        text_content = extract_docx_text(file_path)
+    elif file_ext in ['.xlsx', '.xls', '.xlsm']:
+        text_content = extract_excel_text(file_path)
+    elif file_ext == '.pptx':
+        text_content = extract_pptx_text(file_path)
+    else:
+        logging.warning(f"Unsupported file extension {file_ext} for file {file_path}. Skipping...")
+        return
+
+    write_text_to_pdf(text_content, output_pdf_path, file_name)
+
+if __name__ == '__main__':
+    for doc in os.listdir(INPUT_FOLDER):
+        process_document(os.path.join(INPUT_FOLDER, doc), OUTPUT_FOLDER)
